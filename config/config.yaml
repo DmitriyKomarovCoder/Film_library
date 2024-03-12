@@ -1,0 +1,8 @@
+http:
+  host: 127.0.0.1
+  port: 8080
+  readTimeout: 5 # second
+  writeTimeout: 10 # second
+
+log_file:
+  path: server.log

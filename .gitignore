@@ -1,0 +1,12 @@
+# В идеале исключаю .env
+
+server.log
+
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+go.work
+.idea
