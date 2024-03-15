@@ -10,3 +10,4 @@ server.log
 *.out
 go.work
 .idea
+.vscodes

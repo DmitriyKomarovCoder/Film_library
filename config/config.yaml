@@ -1,8 +1,13 @@
 http:
   host: 127.0.0.1
   port: 8080
-  readTimeout: 5 # second
-  writeTimeout: 10 # second
+  readTimeout: 10000000s
+  writeTimeout: 1000000s
 
 log_file:
   path: server.log
+
+postgres:
+  pool_max: 2
+
+shutdown_timeout: 5s

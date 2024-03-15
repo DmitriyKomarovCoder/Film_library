@@ -2,22 +2,25 @@ package config
 
 import (
 	"fmt"
-	"github.com/ilyakaznacheev/cleanenv"
 	"log"
 	"os"
+	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	Http http      `yaml:"http"`
-	Log  logCustom `yaml:"log_file"`
-	PG   postgres
+	Http            http          `yaml:"http"`
+	Log             logCustom     `yaml:"log_file"`
+	PG              postgres      `yaml:"postgres"`
+	ShutdownTimeout time.Duration `yaml:"shutdown_timeout"`
 }
 
 type http struct {
-	Host         string `yaml:"host"`
-	Port         string `yaml:"port"`
-	ReadTimeout  int    `yaml:"readTimeout"`
-	WriteTimeout int    `yaml:"writeTimeout"`
+	Host         string        `yaml:"host"`
+	Port         string        `yaml:"port"`
+	ReadTimeout  time.Duration `yaml:"readTimeout"`
+	WriteTimeout time.Duration `yaml:"writeTimeout"`
 }
 
 type logCustom struct {
@@ -30,6 +33,7 @@ type postgres struct {
 	Port     int    `env:"DB_PORT"`
 	Password string `env:"DB_PASSWORD"`
 	Host     string `env:"DB_HOST"`
+	PoolMax  int32  `yaml:"pool_max"`
 }
 
 // временное решение, потом буду делать это в compose
@@ -49,12 +53,12 @@ func setEnvValues() error {
 		return fmt.Errorf("Error setting jwt secret, err = %v", err)
 	}
 
-	err = os.Setenv("DB_HOST", "postgres")
+	err = os.Setenv("DB_HOST", "127.0.0.1")
 	if err != nil {
 		return fmt.Errorf("Error setting jwt secret, err = %v", err)
 	}
 
-	err = os.Setenv("DB_PORT", "5432")
+	err = os.Setenv("DB_PORT", "5434")
 	if err != nil {
 		return fmt.Errorf("Error setting jwt secret, err = %v", err)
 	}
