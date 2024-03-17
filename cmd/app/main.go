@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/DmitriyKomarovCoder/Film_library/config"
 	"github.com/DmitriyKomarovCoder/Film_library/internal/app"
+	"github.com/joho/godotenv"
 )
 
-const path = "./config/config.yaml"
+const path = "config.yaml"
 
 // @title		FilmLibrary API
 // @version		1.0.0
@@ -20,6 +22,12 @@ const path = "./config/config.yaml"
 // @host		127.0.0.1:8080
 // @BasePath	/
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Failed to load .env file")
+		return
+	}
+
 	cfg, err := config.NewConfig(path)
 	if err != nil {
 		log.Fatalf("Config error %s", err)

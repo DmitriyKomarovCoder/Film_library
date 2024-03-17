@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
@@ -243,15 +244,14 @@ func TestGetActor(t *testing.T) {
 	time := time.Now()
 	movieArr := []models.MovieArr{{Id: uint(1), Title: "name"}}
 	tests := []struct {
-		name           string
-		rows           *pgxmock.Rows
-		rowsMovie      *pgxmock.Rows
-		rowsMovieErr   error
-		err            error
-		rowsErr        error
-		expected       []models.ResponseActor
-		expectedLast   bool
-		errTransaction bool
+		name         string
+		rows         *pgxmock.Rows
+		rowsMovie    *pgxmock.Rows
+		rowsMovieErr error
+		err          error
+		rowsErr      error
+		expected     []models.ResponseActor
+		errMovie     bool
 	}{
 		{
 			name: "ValidFeed",
@@ -261,19 +261,18 @@ func TestGetActor(t *testing.T) {
 				uint(1), "Voronin", "M", time,
 			),
 			rowsMovie: pgxmock.NewRows([]string{
-				"ma.movie_id",
-				"m.title",
+				"movie_id",
+				"title",
 			}).AddRow(
 				uint(1),
 				"name",
 			),
 
-			err:            nil,
-			rowsErr:        nil,
-			rowsMovieErr:   nil,
-			expected:       []models.ResponseActor{{ActorID: uint(1), Name: "Voronin", Gender: "M", BirthDate: time, Movie: movieArr}},
-			expectedLast:   false,
-			errTransaction: true,
+			err:          nil,
+			rowsErr:      nil,
+			rowsMovieErr: nil,
+			expected:     []models.ResponseActor{{ActorID: uint(1), Name: "Voronin", Gender: "M", BirthDate: time, Movie: movieArr}},
+			errMovie:     true,
 		},
 		{
 			name: "Invalid Scan Movie",
@@ -290,12 +289,11 @@ func TestGetActor(t *testing.T) {
 				"name",
 			),
 
-			err:            fmt.Errorf(""),
-			rowsErr:        nil,
-			rowsMovieErr:   nil,
-			expected:       nil,
-			expectedLast:   false,
-			errTransaction: true,
+			err:          fmt.Errorf("Destination kind 'uint' not supported for value kind 'string' of column 'movie_id'"),
+			rowsErr:      nil,
+			rowsMovieErr: nil,
+			expected:     nil,
+			errMovie:     true,
 		},
 		{
 			name: "Invalid Scan actor",
@@ -305,12 +303,11 @@ func TestGetActor(t *testing.T) {
 				"string", "Voronin", "M", time,
 			),
 
-			err:            fmt.Errorf("[repo] Scanning value error for column 'id': Scan: invalid UUID length: 3"),
-			rowsErr:        nil,
-			rowsMovieErr:   nil,
-			expected:       nil,
-			expectedLast:   false,
-			errTransaction: false,
+			err:          fmt.Errorf("Destination kind 'uint' not supported for value kind 'string' of column 'actor_id'"),
+			rowsErr:      nil,
+			rowsMovieErr: nil,
+			expected:     nil,
+			errMovie:     false,
 		},
 		{
 			name: "Invalid Scan Movie",
@@ -327,12 +324,11 @@ func TestGetActor(t *testing.T) {
 				"name",
 			),
 
-			err:            errors.New("err"),
-			rowsErr:        nil,
-			rowsMovieErr:   errors.New("err"),
-			expected:       nil,
-			expectedLast:   false,
-			errTransaction: true,
+			err:          errors.New("err"),
+			rowsErr:      nil,
+			rowsMovieErr: errors.New("err"),
+			expected:     nil,
+			errMovie:     true,
 		},
 		{
 			name: "Rows error actor",
@@ -344,12 +340,11 @@ func TestGetActor(t *testing.T) {
 				"title",
 			}),
 
-			err:            fmt.Errorf("err"),
-			rowsErr:        nil,
-			rowsMovieErr:   nil,
-			expected:       nil,
-			expectedLast:   false,
-			errTransaction: false,
+			err:          fmt.Errorf("err"),
+			rowsErr:      nil,
+			rowsMovieErr: nil,
+			expected:     nil,
+			errMovie:     false,
 		},
 		{
 			name: "Rows error movie",
@@ -363,12 +358,11 @@ func TestGetActor(t *testing.T) {
 				"title",
 			}).RowError(0, errors.New("err")),
 
-			err:            fmt.Errorf("err"),
-			rowsErr:        nil,
-			rowsMovieErr:   nil,
-			expected:       nil,
-			expectedLast:   false,
-			errTransaction: true,
+			err:          fmt.Errorf("err"),
+			rowsErr:      nil,
+			rowsMovieErr: nil,
+			expected:     nil,
+			errMovie:     true,
 		},
 	}
 
@@ -385,16 +379,17 @@ func TestGetActor(t *testing.T) {
 				WillReturnRows(test.rows).
 				WillReturnError(test.rowsErr)
 
-			if test.errTransaction {
-				escapedQueryCategory := regexp.QuoteMeta(joinActor)
-				mock.ExpectQuery(escapedQueryCategory).
-					WillReturnRows(test.rows).
+			if test.errMovie {
+				escapedQueryMovie := regexp.QuoteMeta(joinActor)
+				mock.ExpectQuery(escapedQueryMovie).
+					WithArgs(uint(1)).
+					WillReturnRows(test.rowsMovie).
 					WillReturnError(test.rowsMovieErr)
 			}
-			transactions, err := repo.GetActors()
+			actorsArray, err := repo.GetActors()
 
-			if !reflect.DeepEqual(transactions, test.expected) {
-				t.Errorf("Expected transactions: %v, but got: %v", test.expected, transactions)
+			if !reflect.DeepEqual(actorsArray, test.expected) {
+				t.Errorf("Expected actors: %v, but got: %v", test.expected, actorsArray)
 			}
 
 			if (test.err == nil && err != nil) || (test.err != nil && err == nil) || (test.err != nil && err != nil && test.err.Error() != err.Error()) {
@@ -405,5 +400,126 @@ func TestGetActor(t *testing.T) {
 				t.Errorf("There were unfulfilled expectations: %s", err)
 			}
 		})
+	}
+}
+
+func TestGetActorQuery(t *testing.T) {
+	mock, _ := pgxmock.NewPool()
+	defer mock.Close()
+
+	repo := NewRepository(mock)
+
+	escapedQuery := regexp.QuoteMeta(getActors)
+	mock.ExpectQuery(escapedQuery).WillReturnError(errors.New("err"))
+	_, err := repo.GetActors()
+
+	assert.Equal(t, err, errors.New("err"))
+}
+
+func TestRepository_GetActorValid(t *testing.T) {
+	mock, _ := pgxmock.NewPool()
+	defer mock.Close()
+
+	repo := NewRepository(mock)
+
+	actorID := uint(1)
+	expectedOldActor := models.UpdateActor{
+		ActorID:   actorID,
+		Name:      "John Doe",
+		Gender:    "M",
+		BirthDate: time.Now(),
+	}
+
+	escapedQuery := regexp.QuoteMeta(getActor)
+	mock.ExpectQuery(escapedQuery).
+		WithArgs(actorID).
+		WillReturnRows(pgxmock.NewRows([]string{"actor_id", "name", "gender", "birth_date"}).
+			AddRow(expectedOldActor.ActorID, expectedOldActor.Name, expectedOldActor.Gender, expectedOldActor.BirthDate))
+
+	oldActor, err := repo.GetActor(actorID)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOldActor, oldActor)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestRepository_GetActorNotValid(t *testing.T) {
+	mock, _ := pgxmock.NewPool()
+	defer mock.Close()
+
+	repo := NewRepository(mock)
+
+	actorID := uint(1)
+
+	escapedQuery := regexp.QuoteMeta(getActor)
+	mock.ExpectQuery(escapedQuery).
+		WithArgs(actorID).
+		WillReturnRows(pgxmock.NewRows([]string{"actor_id", "name", "gender", "birth_date"})).
+		WillReturnError(errors.New("err"))
+	_, err := repo.GetActor(actorID)
+
+	assert.Equal(t, err, errors.New("err"))
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestRepository_CheckActor(t *testing.T) {
+	mock, _ := pgxmock.NewPool()
+
+	defer mock.Close()
+
+	repo := NewRepository(mock)
+
+	actorID := uint(1)
+
+	escapedQuery := regexp.QuoteMeta(checkActor)
+
+	mock.ExpectQuery(escapedQuery).
+		WithArgs(actorID).
+		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
+
+	exists, err := repo.CheckActor(actorID)
+
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	mock.ExpectQuery(escapedQuery).
+		WithArgs(actorID).
+		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
+
+	exists, err = repo.CheckActor(actorID)
+
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	expectedErr := errors.New("error")
+	mock.ExpectQuery(escapedQuery).
+		WithArgs(actorID).
+		WillReturnRows(mock.NewRows([]string{"count"})).
+		WillReturnError(expectedErr)
+
+	exists, err = repo.CheckActor(actorID)
+
+	assert.Equal(t, err, errors.New("error in function CheckActor() layer Repository: error"))
+	assert.False(t, exists)
+
+	expectedErr = sql.ErrNoRows
+	mock.ExpectQuery(escapedQuery).
+		WithArgs(actorID).
+		WillReturnRows(mock.NewRows([]string{"count"})).
+		WillReturnError(expectedErr)
+
+	exists, err = repo.CheckActor(actorID)
+
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }

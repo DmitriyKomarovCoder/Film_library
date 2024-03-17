@@ -1,8 +1,8 @@
 http:
-  host: 127.0.0.1
+  host: golang-app
   port: 8080
-  readTimeout: 10000000s
-  writeTimeout: 1000000s
+  readTimeout: 5s
+  writeTimeout: 10s
 
 log_file:
   path: server.log

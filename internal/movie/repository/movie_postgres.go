@@ -45,6 +45,21 @@ const (
 		FROM movies
 		WHERE movie_id = $1;
 	`
+	searchMovieActorMovieN = `SELECT DISTINCT m.movie_id, m.title, m.description, m.release_date, m.rating
+							FROM movies m
+							JOIN movie_actors ma ON m.movie_id = ma.movie_id
+							JOIN actors a ON ma.actor_id = a.actor_id
+							WHERE a.name successMovieILIKE '%' || $1 || '%' AND m.title ILIKE '%' || $2 || '%';`
+	searchMovieName = `SELECT DISTINCT movie_id, title, description, release_date, rating
+	FROM movies
+	WHERE title ILIKE '%' || $1 || '%'`
+
+	searchMovieActorName = `
+	SELECT DISTINCT m.movie_id, m.title, m.description, m.release_date, m.rating
+	FROM movies m
+	JOIN movie_actors ma ON m.movie_id = ma.movie_id
+	JOIN actors a ON ma.actor_id = a.actor_id
+	WHERE a.name ILIKE '%' || $1 || '%';`
 )
 
 type repository struct {
@@ -58,13 +73,7 @@ func NewRepository(db postgres.DbConn) *repository {
 }
 
 func (r *repository) CreateMovie(movie *models.CreateMovie) (uint, error) {
-	con, err := r.db.Acquire(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	defer con.Release()
-
-	tx, err := con.Begin(context.Background())
+	tx, err := r.db.Begin(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -107,13 +116,7 @@ func (r *repository) UpdateMovie(movie *models.UpdateMovie) (*models.UpdateMovie
 }
 
 func (r *repository) DeleteMovie(movieID uint) (uint, error) {
-	con, err := r.db.Acquire(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	defer con.Release()
-
-	tx, err := con.Begin(context.Background())
+	tx, err := r.db.Begin(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -173,29 +176,17 @@ func (r *repository) GetMovie(movieID uint) (models.UpdateMovie, error) {
 
 func (r *repository) SearchMovie(actorName, movieName string) ([]models.ResponseMovie, error) {
 	var movieArray []models.ResponseMovie
-	var query string
 	var row pgx.Rows
 	var err error
 
 	if actorName != "" && movieName != "" {
-		query = `SELECT DISTINCT m.movie_id, m.title, m.description, m.release_date, m.rating
-                FROM movies m
-                JOIN movie_actors ma ON m.movie_id = ma.movie_id
-                JOIN actors a ON ma.actor_id = a.actor_id
-                WHERE a.name ILIKE '%' || $1 || '%' AND m.title ILIKE '%' || $2 || '%';`
-		row, err = r.db.Query(context.Background(), query, actorName, movieName)
+		row, err = r.db.Query(context.Background(), searchMovieActorMovieN, actorName, movieName)
 	} else if movieName != "" {
-		query = `SELECT DISTINCT movie_id, title, description, release_date, rating
-                FROM movies
-                WHERE title ILIKE '%' || $1 || '%'`
-		row, err = r.db.Query(context.Background(), query, movieName)
+		row, err = r.db.Query(context.Background(), searchMovieName, movieName)
 	} else if actorName != "" {
-		query = `SELECT DISTINCT m.movie_id, m.title, m.description, m.release_date, m.rating
-                FROM movies m
-                JOIN movie_actors ma ON m.movie_id = ma.movie_id
-                JOIN actors a ON ma.actor_id = a.actor_id
-                WHERE a.name ILIKE '%' || $1 || '%';`
-		row, err = r.db.Query(context.Background(), query, actorName)
+		row, err = r.db.Query(context.Background(), searchMovieActorName, actorName)
+	} else {
+		return []models.ResponseMovie{}, nil
 	}
 
 	if err != nil {

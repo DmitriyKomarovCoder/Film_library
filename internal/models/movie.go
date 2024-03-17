@@ -19,7 +19,7 @@ type CreateMovie struct {
 }
 
 type ResponseMovie struct {
-	MovieID     int       `json:"movie_id"`
+	MovieID     uint      `json:"movie_id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	ReleaseDate time.Time `json:"release_date"`

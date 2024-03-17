@@ -132,10 +132,13 @@ func (r *repository) GetActors() ([]models.ResponseActor, error) {
 			}
 			actor.Movie = append(actor.Movie, movieInf)
 		}
+		if err := rowsMovie.Err(); err != nil {
+			return nil, err
+		}
 		actorRes = append(actorRes, actor)
 	}
 
-	if err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 

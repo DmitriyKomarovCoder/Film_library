@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -36,45 +35,10 @@ type postgres struct {
 	PoolMax  int32  `yaml:"pool_max"`
 }
 
-// временное решение, потом буду делать это в compose
-func setEnvValues() error {
-	err := os.Setenv("DB_NAME", "FilmLibrary")
-	if err != nil {
-		return fmt.Errorf("Error setting port, err = %v", err)
-	}
-
-	err = os.Setenv("DB_USER", "kosmatoff")
-	if err != nil {
-		return fmt.Errorf("Error setting jwt secret, err = %v", err)
-	}
-
-	err = os.Setenv("DB_PASSWORD", "2003")
-	if err != nil {
-		return fmt.Errorf("Error setting jwt secret, err = %v", err)
-	}
-
-	err = os.Setenv("DB_HOST", "127.0.0.1")
-	if err != nil {
-		return fmt.Errorf("Error setting jwt secret, err = %v", err)
-	}
-
-	err = os.Setenv("DB_PORT", "5434")
-	if err != nil {
-		return fmt.Errorf("Error setting jwt secret, err = %v", err)
-	}
-
-	return nil
-}
-
 func NewConfig(path string) (*Config, error) {
 	var cfg Config
 
-	err := setEnvValues()
-	if err != nil {
-		panic(err)
-	}
-
-	err = cleanenv.ReadEnv(&cfg)
+	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
 		return &cfg, err
 	}
