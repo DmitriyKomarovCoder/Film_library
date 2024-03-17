@@ -7,7 +7,7 @@ type Usecase interface {
 	UpdateMovie(film *models.UpdateMovie) (*models.UpdateMovie, error)
 	DeleteMovie(filmID uint) (uint, error)
 	GetMovies(querySort, direction string) ([]models.ResponseMovie, error)
-	SearchMovie(actorName, filmName string) (*models.ResponseMovie, error)
+	SearchMovie(actorName, filmName string) ([]models.ResponseMovie, error)
 }
 
 type Repository interface {
@@ -15,6 +15,6 @@ type Repository interface {
 	UpdateMovie(movie *models.UpdateMovie) (*models.UpdateMovie, error)
 	DeleteMovie(movieID uint) (uint, error)
 	GetMovies(querySort, direction string) ([]models.ResponseMovie, error)
-	SearchMovie(actorName, movieName string) (*models.ResponseMovie, error)
+	SearchMovie(actorName, movieName string) ([]models.ResponseMovie, error)
 	GetMovie(movieID uint) (models.UpdateMovie, error)
 }

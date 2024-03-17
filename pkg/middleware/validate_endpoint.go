@@ -2,11 +2,9 @@ package middleware
 
 import (
 	"net/http"
-
-	"github.com/DmitriyKomarovCoder/Film_library/pkg/logger"
 )
 
-func ValidateEndpoint(next http.Handler, l *logger.Logger) http.Handler {
+func ValidateEndpoint(next http.Handler) http.Handler {
 	allowedEndpoints := map[string]map[string]bool{
 		"/actors": {
 			"GET": true,
@@ -20,19 +18,19 @@ func ValidateEndpoint(next http.Handler, l *logger.Logger) http.Handler {
 		"/actors/delete": {
 			"DELETE": true,
 		},
-		"/films/add": {
+		"/movies/add": {
 			"POST": true,
 		},
-		"/films/update": {
+		"/movies/update": {
 			"PUT": true,
 		},
-		"/films": {
+		"/movies": {
 			"GET": true,
 		},
-		"films/delete": {
+		"/movies/delete": {
 			"DELETE": true,
 		},
-		"/films/search": {
+		"/movies/search": {
 			"GET": true,
 		},
 	}

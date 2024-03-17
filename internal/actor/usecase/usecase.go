@@ -3,12 +3,10 @@ package usecase
 import (
 	"github.com/DmitriyKomarovCoder/Film_library/internal/actor"
 	"github.com/DmitriyKomarovCoder/Film_library/internal/models"
-	"github.com/DmitriyKomarovCoder/Film_library/pkg/logger"
 )
 
 type Usecase struct {
 	actorRepo actor.Repository
-	log       logger.Logger
 }
 
 func NewUsecase(ar actor.Repository) *Usecase {
@@ -17,20 +15,41 @@ func NewUsecase(ar actor.Repository) *Usecase {
 	}
 }
 
-func (r *Usecase) CreateActor(actor *models.RequestActor) (uint, error) {
-	return 0, nil
+func (r *Usecase) CreateActor(actor *models.CreateActor) (uint, error) {
+	return r.actorRepo.CreateActor(actor)
 }
 
-func (r *Usecase) UpdateActor(actor *models.RequestActor) (*models.RequestActor, error) {
-	return &models.RequestActor{}, nil
+func (r *Usecase) UpdateActor(uActor *models.UpdateActor) (*models.UpdateActor, error) {
+	oldActor, err := r.actorRepo.GetActor(uActor.ActorID)
+	if err != nil {
+		return &models.UpdateActor{}, err
+	}
+
+	if uActor.Name == "" {
+		uActor.Name = oldActor.Name
+	}
+
+	if uActor.Gender == "N" {
+		uActor.Gender = oldActor.Gender
+	}
+
+	if uActor.BirthDate.IsZero() {
+		uActor.BirthDate = oldActor.BirthDate
+	}
+
+	return r.actorRepo.UpdateActor(uActor)
 }
 
 func (r *Usecase) DeleteActor(actorID uint) (uint, error) {
-	return 0, nil
+	if _, err := r.actorRepo.GetActor(actorID); err != nil {
+		return 0, err
+	}
+
+	return r.actorRepo.DeleteActor(actorID)
 }
 
-func (r *Usecase) GetActor(actorID uint) ([]models.ResponseActor, error) {
-	return []models.ResponseActor{}, nil
+func (r *Usecase) GetActors() ([]models.ResponseActor, error) {
+	return r.actorRepo.GetActors()
 }
 
 func (r *Usecase) CheckActors(actors []uint) (bool, error) {

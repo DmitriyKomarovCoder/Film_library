@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
+
 	"github.com/DmitriyKomarovCoder/Film_library/config"
 	deliveryActor "github.com/DmitriyKomarovCoder/Film_library/internal/actor/delivery/http"
 	repoActor "github.com/DmitriyKomarovCoder/Film_library/internal/actor/repository"
@@ -15,10 +20,6 @@ import (
 	"github.com/DmitriyKomarovCoder/Film_library/pkg/closer"
 	"github.com/DmitriyKomarovCoder/Film_library/pkg/logger"
 	"github.com/DmitriyKomarovCoder/Film_library/pkg/postgres"
-	"log"
-	"net/http"
-	"os/signal"
-	"syscall"
 )
 
 func Run(cfg *config.Config) {
@@ -35,8 +36,8 @@ func Run(cfg *config.Config) {
 		l.Fatal(fmt.Errorf("error: postgres.New: %w", err))
 	}
 
-	repMovie := repoFilm.New(pg)
-	repActor := repoActor.New(pg)
+	repMovie := repoFilm.NewRepository(pg.Pool)
+	repActor := repoActor.NewRepository(pg.Pool)
 
 	useActor := usecaseActor.NewUsecase(repActor)
 	useMovie := usecaseFilm.NewUsecase(repMovie, useActor)
@@ -50,7 +51,7 @@ func Run(cfg *config.Config) {
 		Addr:         cfg.Http.Host + ":" + cfg.Http.Port,
 		Handler:      router,
 		ReadTimeout:  cfg.Http.ReadTimeout,
-		WriteTimeout: cfg.Http.ReadTimeout,
+		WriteTimeout: cfg.Http.WriteTimeout,
 	}
 
 	c := &closer.Closer{}

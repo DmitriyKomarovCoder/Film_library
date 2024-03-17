@@ -11,19 +11,18 @@ import (
 
 func NewRouter(hMovie *movie.Handler, hActor *actor.Handler, logger *logger.Logger) *http.Handler {
 	r := http.NewServeMux()
-
-	r.HandleFunc("/actors", hActor.GetActor)
+	r.HandleFunc("/actors", hActor.GetActors)
 	r.HandleFunc("/actors/add", hActor.AddActor)
 	r.HandleFunc("/actors/update", hActor.UpdateActor)
 	r.HandleFunc("/actors/delete", hActor.DeleteActor)
 
-	r.HandleFunc("/films/add", hMovie.AddMovie)
-	r.HandleFunc("/films/update", hMovie.UpdateMovie)
-	r.HandleFunc("/films", hMovie.GetMovie)
-	r.HandleFunc("/films/delete", hMovie.DeleteMovie)
-	r.HandleFunc("/films/search", hMovie.SearchMovie)
+	r.HandleFunc("/movies/add", hMovie.AddMovie)
+	r.HandleFunc("/movies/update", hMovie.UpdateMovie)
+	r.HandleFunc("/movies", hMovie.GetMovie)
+	r.HandleFunc("/movies/delete", hMovie.DeleteMovie)
+	r.HandleFunc("/movies/search", hMovie.SearchMovie)
 
-	handler := middleware.ValidateEndpoint(r, logger)
+	handler := middleware.ValidateEndpoint(r)
 	handler = middleware.Auth(handler)
 	handler = middleware.Logging(handler, logger)
 	handler = middleware.PanicRecovery(handler, logger)

@@ -3,18 +3,16 @@ package postgres
 import (
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Postgres struct {
-	maxPoolSize int32
-	Pool        *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
 func New(host, userName, password, dbName string, port int, poolSize int32) (*Postgres, error) {
-	pg := &Postgres{
-		maxPoolSize: poolSize,
-	}
+	var pg Postgres
 
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, userName, password, dbName)
@@ -24,7 +22,7 @@ func New(host, userName, password, dbName string, port int, poolSize int32) (*Po
 		return nil, fmt.Errorf("postgres - NewPostgres - pgxpool.ParseConfig: %w", err)
 	}
 
-	poolConfig.MaxConns = pg.maxPoolSize
+	poolConfig.MaxConns = poolSize
 
 	pg.Pool, err = pgxpool.ConnectConfig(context.Background(), poolConfig)
 
@@ -32,7 +30,7 @@ func New(host, userName, password, dbName string, port int, poolSize int32) (*Po
 		return nil, fmt.Errorf("postgres - NewPostgres - connAttempts == 0: %w", err)
 	}
 
-	return pg, nil
+	return &pg, nil
 }
 
 func (p *Postgres) Close(ctx context.Context) error {

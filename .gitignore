@@ -10,4 +10,7 @@ server.log
 *.out
 go.work
 .idea
-.vscodes
+.vscode
+
+*.out.tmp
+*.html

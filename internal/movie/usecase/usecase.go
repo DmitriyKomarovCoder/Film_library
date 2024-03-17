@@ -4,13 +4,11 @@ import (
 	"github.com/DmitriyKomarovCoder/Film_library/internal/actor"
 	"github.com/DmitriyKomarovCoder/Film_library/internal/models"
 	"github.com/DmitriyKomarovCoder/Film_library/internal/movie"
-	"github.com/DmitriyKomarovCoder/Film_library/pkg/logger"
 )
 
 type Usecase struct {
-	mr  movie.Repository
-	au  actor.Usecase
-	log logger.Logger
+	mr movie.Repository
+	au actor.Usecase
 }
 
 func NewUsecase(mr movie.Repository, au actor.Usecase) *Usecase {
@@ -27,7 +25,7 @@ func (mu *Usecase) CreateMovie(film *models.CreateMovie) (uint, error) {
 		return 0, &models.ErrNilIDActor{}
 	}
 
-	if err != nil || !flag {
+	if err != nil {
 		return 0, err
 	}
 	return mu.mr.CreateMovie(film)
@@ -36,7 +34,7 @@ func (mu *Usecase) CreateMovie(film *models.CreateMovie) (uint, error) {
 func (mu *Usecase) UpdateMovie(umovie *models.UpdateMovie) (*models.UpdateMovie, error) {
 	oldMovie, err := mu.mr.GetMovie(umovie.MovieID)
 	if err != nil {
-		return umovie, err
+		return &models.UpdateMovie{}, err
 	}
 
 	if umovie.Description == "" {
@@ -59,13 +57,17 @@ func (mu *Usecase) UpdateMovie(umovie *models.UpdateMovie) (*models.UpdateMovie,
 }
 
 func (r *Usecase) DeleteMovie(filmID uint) (uint, error) {
-	return 0, nil
+	if _, err := r.mr.GetMovie(filmID); err != nil {
+		return 0, err
+	}
+
+	return r.mr.DeleteMovie(filmID)
 }
 
 func (r *Usecase) GetMovies(querySort, direction string) ([]models.ResponseMovie, error) {
 	return r.mr.GetMovies(querySort, direction)
 }
 
-func (r *Usecase) SearchMovie(actorName, filmName string) (*models.ResponseMovie, error) {
-	return &models.ResponseMovie{}, nil
+func (r *Usecase) SearchMovie(actorName, filmName string) ([]models.ResponseMovie, error) {
+	return r.mr.SearchMovie(actorName, filmName)
 }

@@ -1,6 +1,8 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+)
 
 // здесь типо взяли куку, пошли в бд, взяли юзера и дальше проверки
 func Auth(next http.Handler) http.Handler {

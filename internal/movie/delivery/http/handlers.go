@@ -38,9 +38,9 @@ func NewHandler(usecase movie.Usecase, log logger.Logger) *Handler {
 // @Produce json
 // @Param movie body models.CreateMovie true "Movie details"
 // @Success 200 {object} uint "Movie ID"
-// @Failure 400 {object} ResponseError "Bad Request"
-// @Failure 500 {object} ResponseError "Internal Server Error"
-// @Router /movie/add [post]
+// @Failure 400 {object} string "Bad Request"
+// @Failure 500 {object} string "Internal Server Error"
+// @Router /movies/add [post]
 func (h *Handler) AddMovie(w http.ResponseWriter, r *http.Request) {
 	var movie models.CreateMovie
 	dec := json.NewDecoder(r.Body)
@@ -51,7 +51,7 @@ func (h *Handler) AddMovie(w http.ResponseWriter, r *http.Request) {
 
 	validate := validator.New()
 	if err := validate.Struct(movie); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid input body", http.StatusBadRequest)
 		return
 	}
 
@@ -59,7 +59,7 @@ func (h *Handler) AddMovie(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, &models.ErrNilIDActor{}) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			h.log.Errorf("user bad request: %s", err)
+			h.log.Infof("user bad request: %s", err)
 			return
 		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -88,9 +88,9 @@ func (h *Handler) AddMovie(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param movie body models.UpdateMovie true "Movie details"
 // @Success 200 {object} models.UpdateMovie "Update movie response"
-// @Failure 400 {object} ResponseError "Bad Request"
-// @Failure 500 {object} ResponseError "Internal Server Error"
-// @Router /movie/update [put]
+// @Failure 400 {object} string "Bad Request"
+// @Failure 500 {object} string "Internal Server Error"
+// @Router /movies/update [put]
 func (h *Handler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
 	var updMovie models.UpdateMovie
 	updMovie.Rating = -1
@@ -103,7 +103,7 @@ func (h *Handler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
 
 	validate := validator.New()
 	if err := validate.Struct(updMovie); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid input body", http.StatusBadRequest)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *Handler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "update object does not exist", http.StatusBadRequest)
-			h.log.Errorf("user bad request: %s", err)
+			h.log.Infof("user bad request: %s", err)
 			return
 		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -152,9 +152,9 @@ func (h *Handler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
 // @Param   collection  query     []string   false  "string collection"  collectionFormat(multi)
 // @Param   extensions  query     []string   false  "string collection"  extensions(x-example=test,x-nullable)
 // @Success		200		{object}	[]models.ResponseMovie  "Response array"
-// @Failure		400		{object}	ResponseError			 "Client error"
-// @Failure		500		{object}	ResponseError			 "Internal Server Error"
-// @Router		/film [get]
+// @Failure		400		{object}	string			 "Client error"
+// @Failure		500		{object}	string			 "Internal Server Error"
+// @Router		/movies [get]
 func (h *Handler) GetMovie(w http.ResponseWriter, r *http.Request) {
 	var query, value string
 	queryParams := r.URL.Query()
@@ -169,21 +169,16 @@ func (h *Handler) GetMovie(w http.ResponseWriter, r *http.Request) {
 	} else if query == "" && titleValue == "desc" || titleValue == "asc" {
 		query = "title"
 		value = titleValue
-	} else if query == "" && releaseDateValue == "desc" || releaseDateValue == "acs" {
+	} else if query == "" && releaseDateValue == "desc" || releaseDateValue == "asc" {
 		query = "realease_date"
 		value = releaseDateValue
-	} else if query == "" {
+	} else {
 		query = "rating"
 		value = "desc"
 	}
 
 	masMovie, err := h.usecase.GetMovies(query, value)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			http.Error(w, "movies does not exist", http.StatusBadRequest)
-			h.log.Errorf("user bad request: %s", err)
-			return
-		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		h.log.Error(err)
 		return
@@ -204,25 +199,71 @@ func (h *Handler) GetMovie(w http.ResponseWriter, r *http.Request) {
 }
 
 // поиск фильма по фрагменту названия, по фрагменту имени актёра
+
+// @Summary Search movie
+// @Description Search by actor name or movie title.
+// @Tags movies
+// @Produce json
+// @Param actor_name query  string false "Actor name"
+// @Param movie_title query string false "Movie title"
+// @Success 200 {object} []models.ResponseMovie "Array movie or null value"
+// @Failure 400 {object} string "Bad Request"
+// @Failure 500 {object} string "Internal Server Error"
+// @Router /movies/search [get]
 func (h *Handler) SearchMovie(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
+
+	actorName := queryParams.Get("actor_name")
+	movieTitle := queryParams.Get("movie_title")
+
+	if actorName == "" && movieTitle == "" {
+		http.Error(w, "quey doesn't exist", http.StatusBadRequest)
+		h.log.Error("user bad request")
+		return
+	}
+
+	movie, err := h.usecase.SearchMovie(actorName, movieTitle)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		h.log.Error(err)
+		return
+	}
+
+	responseJSON, err := json.Marshal(movie)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(responseJSON)
+	if err != nil {
+		h.log.Error(err)
+	}
 }
 
-// @Summary		Get sort movies
+// @Summary		Delete movie
 // @Tags		movies
-// @Description	Get sort movies use query
+// @Description	Delete movie to the database
 // @Produce		json
 // @Param       uint         query      uint        false  "uint valid"
 // @Success		200		{object}	uint  					 "Delete id"
-// @Failure		400		{object}	ResponseError			 "Client error"
-// @Failure		500		{object}	ResponseError			 "Internal Server Error"
-// @Router		/film/delete [delete]
+// @Failure		400		{object}	string			 "Client error"
+// @Failure		500		{object}	string			 "Internal Server Error"
+// @Router		/movies/delete [delete]
 func (h *Handler) DeleteMovie(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 
 	idMovie, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "id not int", http.StatusBadRequest)
-		h.log.Errorf("user bad request: %s", err)
+		http.Error(w, "id not uint", http.StatusBadRequest)
+		h.log.Infof("user bad request: %s", err)
+		return
+	}
+
+	if idMovie < 0 {
+		http.Error(w, "id not negative", http.StatusBadRequest)
 		return
 	}
 
@@ -230,7 +271,7 @@ func (h *Handler) DeleteMovie(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "movies does not exist", http.StatusBadRequest)
-			h.log.Errorf("user bad request: %s", err)
+			h.log.Infof("user bad request: %s", err)
 			return
 		}
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
